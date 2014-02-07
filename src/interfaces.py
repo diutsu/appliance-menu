@@ -2,8 +2,8 @@ import re
 import os
 
 def setStatic(settings) :
-    fwrite = open('/etc/network/interfaces~','w')
-    with open('/etc/network/interfaces','r') as fread:
+    fwrite = open('if~','w')
+    with open('if','r') as fread:
         try:
             for line in fread :
                 line_out = re.sub(r"(iface .*eth0 .*inet.*) dhcp",r"\g<1> static",line)
@@ -17,11 +17,11 @@ def setStatic(settings) :
         finally:
             fread.close()
             fwrite.close()
-            os.rename('/etc/network/interfaces~','/etc/network/interfaces')
+            os.rename('if~','if')
 
 def setDHCP():
-    fwrite = open('/etc/network/interfaces~','w')
-    with open('/etc/network/interfaces','r') as fread:
+    fwrite = open('if~','w')
+    with open('if','r') as fread:
         try:
             replaced = False
             for line in fread :
@@ -40,10 +40,10 @@ def setDHCP():
         finally:
             fread.close()
             fwrite.close()
-            os.rename('/etc/network/interfaces~','/etc/network/interfaces')
+            os.rename('if~','if')
 
 
 
-st = { "address" : "1.1.1.1", "network":"1.0.0.0", "broadcast" : "0.1.1.1",
-        "gateway" : "1.0.1.0", "netmask":"1.0.0.1"}
-setStatic(st)
+#st = { "address" : "1.1.1.1", "network":"1.0.0.0", "broadcast" : "0.1.1.1",
+        #"gateway" : "1.0.1.0", "netmask":"1.0.0.1"}
+#setStatic(st)
