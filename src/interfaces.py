@@ -42,8 +42,43 @@ def setDHCP():
             fwrite.close()
             os.rename('if~','if')
 
+def loadStaticSettings():
+    settings ={}
+    matched = False
+    with open('if','r') as fread:
+        try:
+            for line in fread :
+                line_out = re.match(r"(iface .*eth0 .*inet.*) static",line)
+                
+                if matched : 
+                    matched = False
+                    m = re.search("address\s(.*)",line)
+                    if m : 
+                        settings["address"]=m.group(1)
+                        searched = True
 
+                    m = re.search("network\s(.*)", line)
+                    if m : 
+                        settings["network"]=m.group(1)
+                        searched = True
+                    
+                    m = re.search("broadcast\s(.*)", line)
+                    if m : 
+                        settings["broadcast"]=m.group(1)
+                        searched = True
 
-#st = { "address" : "1.1.1.1", "network":"1.0.0.0", "broadcast" : "0.1.1.1",
-        #"gateway" : "1.0.1.0", "netmask":"1.0.0.1"}
-#setStatic(st)
+                    m = re.search("gateway\s(.*)",line)
+                    if m : 
+                        settings["gateway"]=m.group(1)
+                        searched = True
+
+                    m = re.search("netmask\s(.*)",line)
+                    if m : 
+                        settings["netmask"]=m.group(1)
+                        searched = True
+
+                if line_out : 
+                    matched = True
+        finally:
+            fread.close()
+    return settings
