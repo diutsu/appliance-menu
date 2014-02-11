@@ -5,14 +5,23 @@ def setStatic(settings) :
     fwrite = open('if~','w')
     with open('if','r') as fread:
         try:
+            changed = False
             for line in fread :
                 line_out = re.sub(r"(iface .*eth0 .*inet.*) dhcp",r"\g<1> static",line)
-                if line != line_out :
+                m = re.match("iface .*eth0 .*inet.* static",line)
+                if line != line_out or m :
+                    changed = True
                     fwrite.write(line_out)    
+                    print settings
                     for key in settings.keys() :
-                        line = "\t" + key + " " + settings[key] + "\n"
-                        fwrite.write(line)
+                        print key
+                        fwrite.write("\t" + key + " " + settings[key] + "\n")
                     continue
+                elif changed :
+                    if not line.strip() :
+                        changed = False
+                    else : 
+                        continue
                 fwrite.write(line)
         finally:
             fread.close()
@@ -55,27 +64,27 @@ def loadStaticSettings():
                     m = re.search("address\s(.*)",line)
                     if m : 
                         settings["address"]=m.group(1)
-                        searched = True
+                        matched = True
 
                     m = re.search("network\s(.*)", line)
                     if m : 
                         settings["network"]=m.group(1)
-                        searched = True
+                        matched = True
                     
                     m = re.search("broadcast\s(.*)", line)
                     if m : 
                         settings["broadcast"]=m.group(1)
-                        searched = True
+                        matched = True
 
                     m = re.search("gateway\s(.*)",line)
                     if m : 
                         settings["gateway"]=m.group(1)
-                        searched = True
+                        matched = True
 
                     m = re.search("netmask\s(.*)",line)
                     if m : 
                         settings["netmask"]=m.group(1)
-                        searched = True
+                        matched = True
 
                 if line_out : 
                     matched = True

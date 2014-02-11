@@ -123,16 +123,18 @@ class CursesIfaces():
 
     def write(self) :
         settings = {}
-        if(self.address!="") :
-            settings["address"]=self.address
-        if(self.network!="") :
-            settings["network"]=self.network
-        if(self.broadcast!="") :
-            settings["broadcast"]=self.broadcast
-        if(self.gateway!="") :
-            settings["gateway"]=self.gateway
         if(self.netmask!="") :
             settings["netmask"]=self.netmask
+        if(self.gateway!="") :
+            settings["gateway"]=self.gateway
+        if(self.broadcast!="") :
+            settings["broadcast"]=self.broadcast
+        if(self.network!="") :
+            settings["network"]=self.network
+        if(self.address!="") :
+            settings["address"]=self.address
+
+        curses.endwin()
         interfaces.setStatic(settings)  
 
     def load(self):
@@ -140,9 +142,9 @@ class CursesIfaces():
         self.address =  settings["address"] if "address" in settings.keys() else ""
         self.menu.items[0] = ("Address  : " + self.address,self.menu.items[0][1])
         self.network = settings["network"] if "network" in settings.keys() else ""
-        self.menu.items[1] = ("Network  : " + self.broadcast,self.menu.items[1][1])
+        self.menu.items[1] = ("Network  : " + self.network,self.menu.items[1][1])
         self.broadcast = settings["broadcast"] if "broadcast" in settings.keys() else ""
-        self.menu.items[2] = ("Broadcast : " + self.network,self.menu.items[2][1])
+        self.menu.items[2] = ("Broadcast : " + self.broadcast,self.menu.items[2][1])
         self.gateway = settings["gateway"] if "gateway" in settings.keys() else ""
         self.menu.items[3] = ("Gateway  : " + self.gateway,self.menu.items[3][1])
         self.netmask = settings["netmask"] if "netmask" in settings.keys() else ""
