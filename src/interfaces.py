@@ -2,8 +2,8 @@ import re
 import os
 
 def setStatic(settings) :
-    fwrite = open('if~','w')
-    with open('if','r') as fread:
+    fwrite = open('ifaces','w')
+    with open('/etc/network/interfaces','r') as fread:
         try:
             changed = False
             for line in fread :
@@ -26,11 +26,11 @@ def setStatic(settings) :
         finally:
             fread.close()
             fwrite.close()
-            os.rename('if~','if')
+            os.rename('ifaces','/etc/network/interfaces')
 
 def setDHCP():
-    fwrite = open('if~','w')
-    with open('if','r') as fread:
+    fwrite = open('ifaces','w')
+    with open('/etc/network/interfaces','r') as fread:
         try:
             replaced = False
             for line in fread :
@@ -49,12 +49,12 @@ def setDHCP():
         finally:
             fread.close()
             fwrite.close()
-            os.rename('if~','if')
+            os.rename('ifaces','/etc/network/interfaces')
 
 def loadStaticSettings():
     settings ={}
     matched = False
-    with open('if','r') as fread:
+    with open('/etc/network/interfaces','r') as fread:
         try:
             for line in fread :
                 line_out = re.match(r"(iface .*eth0 .*inet.*) static",line)

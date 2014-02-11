@@ -241,7 +241,7 @@ class CursesIfaces():
         
     def editInterfaces(self):
         curses.endwin()
-        call(["nano","if"])
+    	call(["nano","/etc/network/interfaces"])
         self.menu.confirm("","Restart network, to apply changes")
 
 
@@ -279,7 +279,7 @@ class FenixFramework():
         self.write()
 
     def write(self):
-        with open("ff.prop","w") as f:
+        with open("/home/fenixuser/fenix-webapp/src/main/resources/fenix-framework.properties","w") as f:
             f.write("# Add additional backend-specific configurations in here\n\n")
             f.write("dbAlias=//"+self.host+":"+self.port+"/"+self.name+"\n")
             f.write("dbUsername="+self.user+"\n")
@@ -289,7 +289,7 @@ class FenixFramework():
             f.close()
 
     def load(self):
-        with open("ff.prop","r") as f:
+        with open("/home/fenixuser/fenix-webapp/src/main/resources/fenix-framework.properties","r") as f:
             for line in f :
                 result = re.match("dbAlias=//(.*):([0-9]+)/(.*)",line)
                 if result : 
@@ -363,7 +363,6 @@ class ApplianceMenu(object):
         main_menu = Menu(main_menu_items, "FenixEdu VM", self.screen, False)                       
         main_menu.display()                                                  
 
-
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return socket.inet_ntoa(fcntl.ioctl(
@@ -371,8 +370,6 @@ def get_ip_address(ifname):
         0x8915,  # SIOCGIFADDR
         struct.pack('256s', ifname[:15])
     )[20:24])
-
-   
 
 def reboot():
     curses.endwin()
