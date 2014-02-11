@@ -1,25 +1,36 @@
 #!/usr/bin/env python2                                                       
-
+# -*- coding: utf-8 -*-
+import time
 import curses                                                                
 import interfaces
 import re
 import sys
+import socket
+import fcntl
+import struct
+
 from curses import panel,textpad
 from subprocess import call
+reload(sys)  # to enable `setdefaultencoding` again
+
+sys.setdefaultencoding("UTF-8")
 
 class Menu(object):                                                          
 
-    title = ""
-    def __init__(self, items, title, stdscreen):                                    
-        self.window = stdscreen.subwin(0,0)                                  
+    def __init__(self, items, title, stdscreen, exit = True):                                    
+        self.window = stdscreen.subwin(11,0)                                  
         self.window.keypad(1)                                                
         self.panel = panel.new_panel(self.window)                            
         self.panel.hide()                                                    
         panel.update_panels()                                                
         self.title = title
         self.position = 0                                                    
-        self.items = items                                                   
-        self.items.append(('exit','exit'))                                   
+        self.items = items     
+        self.hasExit = exit
+        self.top = curses.newwin(0,0,0,0)
+        self.topPanel = panel.new_panel(self.top)
+        if exit : 
+            self.items.append(('exit','exit'))                                   
 
     def navigate(self, n):                                                   
         self.position += n                                                   
@@ -28,13 +39,39 @@ class Menu(object):
         elif self.position >= len(self.items):                               
             self.position = len(self.items)-1                                
 
+    def displayTop(self) :
+        self.top = curses.newwin(11,78,0,0)
+        self.topPanel = panel.new_panel(self.top)
+        self.updateTop()
+        self.topPanel.top()
+        self.topPanel.show()
+        self.top.refresh()
+        panel.update_panels()
+        curses.doupdate()
+
+    def updateTop(self) :
+        self.top.addstr(0,0,"                   XXXXXXX                                                    ")
+        self.top.addstr(1,0,"                  + XXXXX +                                                   ")
+        self.top.addstr(2,0,"                +++++ X +++++                                                 ")
+        self.top.addstr(3,0,"               +++++++ +++++++                                                ")
+        self.top.addstr(4,0,"              . +++++ . +++++ .            FenixEdu™                          ")
+        self.top.addstr(5,0,"            ..... + ..... + .....          VM                                 ")
+        self.top.addstr(6,0,"           ....... ....... .......                                            ")
+        self.top.addstr(7,0,"            .....   .....   .....                                             ")
+        self.top.addstr(8,0,"              .       .       .                                               ")
+        self.top.addstr(9,0,"Your IP is : ")
+        self.top.addstr(10,0,"Your IP is : " + get_ip_address("eth0"))
+        self.top.refresh()
+
+
     def display(self):                                                       
         self.panel.top()                                                     
         self.panel.show()                                                    
         self.window.clear()                                                  
-
+        self.displayTop()
         while True:                                                          
             self.window.refresh()                                            
+            self.top.refresh()
             curses.doupdate()                                                
             self.setTitle(self.title,self.window)
             for index, item in enumerate(self.items):                        
@@ -49,7 +86,7 @@ class Menu(object):
             key = self.window.getch()                                        
 
             if key in [curses.KEY_ENTER, ord('\n')]:                         
-                if self.position == len(self.items)-1:                       
+                if self.position == len(self.items)-1 and self.hasExit :                       
                     break                                                    
                 else:                                                        
                     self.items[self.position][1]()
@@ -66,23 +103,63 @@ class Menu(object):
         curses.doupdate()
 
     def getParam(self, prompt_string):
-        prompt = curses.newwin(3,43,7,0)
+        prompt = curses.newwin(3,43,5,0)
         prompt.border(0)
         self.setTitle("New Value for : " + prompt_string,prompt)
         prompt.addstr(1, 1, ">")
         prompt.refresh()
-        inwin = curses.newwin(1,40,8,2)
+        inwin = curses.newwin(1,40,6,2)
         curses.doupdate()
         tb=curses.textpad.Textbox(inwin)
         inp = tb.edit()
         inp = inp[:-1]
+        del tb
+        inwin.erase()
+        prompt.erase()
+        inwin.refresh()
+        prompt.refresh()
+        del inwin
+        del prompt
         self.panel.top()
         self.panel.show()
+        self.panel.window().touchwin()
         self.panel.window().clear()
         self.panel.window().refresh()
+        self.updateTop()
         curses.doupdate()
         return inp
     
+    def wait(self, title, text):
+        self.wait = curses.newwin(3,43,5,0)
+        self.wait.border(0)
+        self.setTitle(title,self.wait)
+        self.wait.addstr(1, 1, text)
+        self.wait.refresh()
+        curses.doupdate()
+        return 
+    
+    def confirm(self, title, text):
+        self.wait = curses.newwin(3,43,5,0)
+        self.wait.border(0)
+        self.setTitle(title,self.wait)
+        self.wait.addstr(1, 1, text)
+        self.wait.refresh()
+        curses.doupdate()
+        self.wait.getch()
+        self.wait.erase()
+        self.wait.refresh()
+        del self.wait
+        self.updateTop()
+        curses.doupdate()
+        return 
+
+    def delWait(self) :
+        self.wait.erase()
+        self.wait.refresh()
+        self.updateTop()
+        curses.doupdate()
+        del self.wait
+
     def setTitle(self,string,win) :
         win.attron(curses.A_REVERSE)
         win.addstr(0,1,"  "+string)
@@ -151,6 +228,22 @@ class CursesIfaces():
         self.menu.items[4] = ("Netmask  : " + self.netmask,self.menu.items[4][1])
         self.menu.display()
             
+    def reloadNetwork(self):
+        self.menu.wait("Network restart","Please wait while network restarts")
+        call(["/etc/init.d/network restart"])
+        self.menu.delWait()
+        curses.endwin()
+        return
+
+    def setDHCP(self) :
+        interfaces.setDHCP()
+        self.menu.confirm("Changed to DHCP","Restart network, to apply changes")
+        
+    def editInterfaces(self):
+        curses.endwin()
+        call(["nano","if"])
+        self.menu.confirm("","Restart network, to apply changes")
+
 
 class FenixFramework():
     host = ""
@@ -220,6 +313,7 @@ class FenixFramework():
             f.close()
 
 class ApplianceMenu(object):                                                         
+    top = ""
 
     def __init__(self, stdscreen):                                           
         self.screen = stdscreen                                              
@@ -227,9 +321,10 @@ class ApplianceMenu(object):
         ff = FenixFramework()
         ci = CursesIfaces()
         networkMenu_items = [                                                    
-                ('Use DHCP', interfaces.setDHCP),                                       
+                ('Use DHCP', ci.setDHCP),                                       
                 ('Use Static IP', ci.load),
-                ('Edit /etc/network/interfaces', editInterfaces) 
+                ('Edit /etc/network/interfaces', ci.editInterfaces),
+                ('Restart Network', ci.reloadNetwork) 
                 ]                                                            
         networkMenu = Menu(networkMenu_items, "Network Settings", self.screen)                           
         
@@ -265,14 +360,20 @@ class ApplianceMenu(object):
                 ('Database Info', databaseMenu.display),   
                 ('System', systemMenu.display)                                 
                 ]                                                            
-        main_menu = Menu(main_menu_items, "FenixEdu VM", self.screen)                       
+        main_menu = Menu(main_menu_items, "FenixEdu VM", self.screen, False)                       
         main_menu.display()                                                  
-    
-def editInterfaces():
-    curses.endwin()
-    call(["nano","if"])
-    return
+
+
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname[:15])
+    )[20:24])
+
    
+
 def reboot():
     curses.endwin()
     call(["reboot"])
