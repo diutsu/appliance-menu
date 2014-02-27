@@ -8,12 +8,14 @@ import sys
 import socket
 import fcntl
 import struct
+import locale
+import urllib2 
 
 from curses import panel,textpad
-from subprocess import call
-reload(sys)  # to enable `setdefaultencoding` again
+from subprocess import call,check_output
+#reload(sys)  # to enable `setdefaultencoding` again
 
-sys.setdefaultencoding("UTF-8")
+#sys.setdefaultencoding("UTF-8")
 
 class Menu(object):                                                          
 
@@ -23,14 +25,15 @@ class Menu(object):
         self.panel = panel.new_panel(self.window)                            
         self.panel.hide()                                                    
         panel.update_panels()                                                
-        self.title = title
+        self.titlestr = title
         self.position = 0                                                    
         self.items = items     
         self.hasExit = exit
         self.top = curses.newwin(0,0,0,0)
         self.topPanel = panel.new_panel(self.top)
+        self.terminate = False
         if exit : 
-            self.items.append(('exit','exit'))                                   
+            self.items.append(('Exit','exit'))                                   
 
     def navigate(self, n):                                                   
         self.position += n                                                   
@@ -50,6 +53,11 @@ class Menu(object):
         curses.doupdate()
 
     def updateTop(self) :
+        try :
+            self.ip = get_ip_address("eth0")
+        except :
+            self.ip = False
+
         self.top.addstr(0,0,"                   XXXXXXX                                                    ")
         self.top.addstr(1,0,"                  + XXXXX +                                                   ")
         self.top.addstr(2,0,"                +++++ X +++++                                                 ")
@@ -59,8 +67,11 @@ class Menu(object):
         self.top.addstr(6,0,"           ....... ....... .......                                            ")
         self.top.addstr(7,0,"            .....   .....   .....                                             ")
         self.top.addstr(8,0,"              .       .       .                                               ")
-        self.top.addstr(9,0,"Your IP is : ")
-        self.top.addstr(10,0,"Your IP is : " + get_ip_address("eth0"))
+        if self.ip :
+            self.top.addstr(9,0,"Your url is http://"+self.ip+"/")
+            self.top.addstr(10,0,"Your IP is : " + self.ip)
+        else : 
+            self.top.addstr(10,0,"Check your network configurations")
         self.top.refresh()
 
 
@@ -73,7 +84,7 @@ class Menu(object):
             self.window.refresh()                                            
             self.top.refresh()
             curses.doupdate()                                                
-            self.setTitle(self.title,self.window)
+            self.setTitle(self.titlestr,self.window)
             for index, item in enumerate(self.items):                        
                 if index == self.position:                                   
                     mode = curses.A_REVERSE                                  
@@ -86,7 +97,7 @@ class Menu(object):
             key = self.window.getch()                                        
 
             if key in [curses.KEY_ENTER, ord('\n')]:                         
-                if self.position == len(self.items)-1 and self.hasExit :                       
+                if (self.position == len(self.items)-1 and self.hasExit) or self.terminate:                       
                     break                                                    
                 else:                                                        
                     self.items[self.position][1]()
@@ -227,13 +238,14 @@ class CursesIfaces():
         self.netmask = settings["netmask"] if "netmask" in settings.keys() else ""
         self.menu.items[4] = ("Netmask  : " + self.netmask,self.menu.items[4][1])
         self.menu.display()
+        self.menu.confirm("Changed to DHCP","Restart network, to apply changes")
             
     def reloadNetwork(self):
         self.menu.wait("Network restart","Please wait while network restarts")
-        call(["/etc/init.d/network restart"])
+        call("service networking stop && service networking start",shell=True)
         self.menu.delWait()
         curses.endwin()
-        return
+	return
 
     def setDHCP(self) :
         interfaces.setDHCP()
@@ -241,7 +253,7 @@ class CursesIfaces():
         
     def editInterfaces(self):
         curses.endwin()
-    	call(["nano","/etc/network/interfaces"])
+        call(["nano","/etc/network/interfaces"])
         self.menu.confirm("","Restart network, to apply changes")
 
 
@@ -252,7 +264,7 @@ class FenixFramework():
     user = ""
     passw = ""
     menu = ""
-
+    screen = ""
     def setHost(self) : 
         self.host = self.menu.getParam('Hostname')
         self.menu.items[0] = ("Hostname : " + self.host,self.menu.items[0][1])
@@ -311,16 +323,89 @@ class FenixFramework():
                     self.menu.items[4] = ("Password : " + self.passw,self.menu.items[4][1])
                     continue
             f.close()
+   
+    def restart(self) :
+        self.menu.wait("Network restart","Please wait while network restarts")
+	check_output("/etc/init.d/mvninit.sh stop",shell=True)
+	while(self.isRunning()) :
+		time.sleep(1)
+	time.sleep(10)
+	check_output("/etc/init.d/mvninit.sh start",shell=True)
+	while( not self.isRunning()) :
+		time.sleep(1)
+        self.menu.delWait()
+    
+    def start(self) :
+	curses.endwin()	
+        print check_output("/etc/init.d/mvninit.sh force_start",shell=True)
+
+    def isRunning(self) :
+	try:
+	    urllib2.urlopen('http://localhost/')
+            return True
+	except:
+	    return False
+
+    def destroy(self) :
+        destroyDbMenu_items = [
+                ('Ok, destroy it', self.destroyConfirmed),]                                                            
+        destroyDbMenu = Menu(destroyDbMenu_items, "Destroying the database is irreversible, do you want to proceed?", self.screen)                           
+        destroyDbMenu.display()
+
+    def destroyConfirmed(self) : 
+	self.stop()
+	call("mysql -u"+self.user+" -p"+self.passw+" -e 'drop database "+self.name+"; create database "+self.name+";'",shell=True)
+	self.start()	
+
+class SshCalls():
+    menu = ""
+    def sshStatus(self) :
+        output = check_output(["service","ssh","status"])
+        if "running" in output :
+            self.menu.titlestr = "SSH server is running"
+            self.menu.items[0] = ('Stop SSH', self.sshStop)
+        else :
+            self.menu.items[0] = ('Start SSH', self.sshStart)
+            self.menu.titlestr = "SSH server is stopped"
+    def sshStop(self) :
+        check_output(["service","ssh","stop"])
+        check_output(["pkill","sshd"])
+        self.menu.items[0] = ('Start SSH', self.sshStart)
+        self.menu.titlestr = "SSH server is stopped"
+    def sshStart(self) :
+        check_output(["service","ssh","start"])
+        self.menu.items[0] = ('Stop SSH', self.sshStop)
+        self.menu.titlestr = "SSH server is running"
 
 class ApplianceMenu(object):                                                         
     top = ""
 
     def __init__(self, stdscreen):                                           
-        self.screen = stdscreen                                              
+	self.screen = stdscreen                                              
         curses.curs_set(0)                                                   
         ff = FenixFramework()
+	if(not ff.isRunning()):
+		ff.start()
         ci = CursesIfaces()
-        networkMenu_items = [                                                    
+        win = stdscreen.subwin(0,0)                                  
+	win.addstr("Waiting for server to start, please be patient")
+        win.refresh()          
+	curses.doupdate()                                  
+	blink = False
+	while(not ff.isRunning()) :
+		if blink:
+			blink = False
+			win.addstr(1,0,". . .")
+			win.refresh()          
+			curses.doupdate()                                  
+		else :
+			blink = True
+			win.addstr(1,0,"     ")
+			win.refresh()          
+			curses.doupdate()                                  
+		time.sleep(1)
+        
+	networkMenu_items = [                                                    
                 ('Use DHCP', ci.setDHCP),                                       
                 ('Use Static IP', ci.load),
                 ('Edit /etc/network/interfaces', ci.editInterfaces),
@@ -339,16 +424,27 @@ class ApplianceMenu(object):
         ci.menu = ifacesMenu
         
         databaseMenu_items = [
-                #('Show Curent', ff.show),
                 ('Hostname : ', ff.setHost),                                       
                 ('DB Port  : ', ff.setPort),
                 ('DB Name  : ', ff.setDatabase),
                 ('Username : ', ff.setUser),                                      
-                ('Password : ', ff.setPass)                                      
-                ]                                                            
+                ('Password : ', ff.setPass),                                      
+                ('Restart Fenix : ', ff.restart),                                      
+                ('Destroy context : ', ff.destroy),                                      
+                 ]                                                            
         databaseMenu = Menu(databaseMenu_items, "Database Settings", self.screen)                           
         ff.menu = databaseMenu
         ff.load()
+	ff.screen = self.screen
+    
+        ssh_calls = SshCalls()
+        sshMenu_items = [
+            ("Stop SSH: ", ssh_calls.sshStop)
+            ]
+	sshMenu = Menu(sshMenu_items, "Ssh Status", self.screen)
+   	ssh_calls.menu = sshMenu
+        ssh_calls.sshStatus()
+        
         systemMenu_items = [                                                    
                 ('Shutdown', shutdown),                                       
                 ('Reboot', reboot)                                      
@@ -357,11 +453,14 @@ class ApplianceMenu(object):
 
         main_menu_items = [                                                  
                 ('Network', networkMenu.display),                                       
-                ('Database Info', databaseMenu.display),   
+                ('Database Info', databaseMenu.display),
+                ('SSH Server', sshMenu.display),
                 ('System', systemMenu.display)                                 
                 ]                                                            
         main_menu = Menu(main_menu_items, "FenixEdu VM", self.screen, False)                       
-        main_menu.display()                                                  
+        
+	main_menu.display()                                                  
+
 
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -370,6 +469,8 @@ def get_ip_address(ifname):
         0x8915,  # SIOCGIFADDR
         struct.pack('256s', ifname[:15])
     )[20:24])
+
+   
 
 def reboot():
     curses.endwin()
@@ -382,4 +483,7 @@ def shutdown():
     sys.exit()
     
 if __name__ == '__main__':                                                       
+    locale.setlocale(locale.LC_ALL, '')
     curses.wrapper(ApplianceMenu)   
+
+

@@ -2,7 +2,7 @@ import re
 import os
 
 def setStatic(settings) :
-    fwrite = open('ifaces','w')
+    fwrite = open('if~','w')
     with open('/etc/network/interfaces','r') as fread:
         try:
             changed = False
@@ -26,10 +26,10 @@ def setStatic(settings) :
         finally:
             fread.close()
             fwrite.close()
-            os.rename('ifaces','/etc/network/interfaces')
+            os.rename('if~','if')
 
 def setDHCP():
-    fwrite = open('ifaces','w')
+    fwrite = open('if~','w')
     with open('/etc/network/interfaces','r') as fread:
         try:
             replaced = False
@@ -49,7 +49,7 @@ def setDHCP():
         finally:
             fread.close()
             fwrite.close()
-            os.rename('ifaces','/etc/network/interfaces')
+            os.rename('if~','/etc/network/interfaces')
 
 def loadStaticSettings():
     settings ={}
