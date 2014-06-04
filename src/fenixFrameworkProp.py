@@ -1,12 +1,16 @@
 #!/usr/bin/env python2                                                       
 import urllib2
+import os
 import re
 import curses 
+import time
+import fenixedumenu
 from subprocess import call,check_output
 
-directory= "/home/fenixuser/fenix-webapp/"
+directory= "/home/fenixedu/fenixedu-appliance-webapp/"
 configFile= directory+"src/main/resources/configuration.properties"
 propFile= directory+"src/main/resources/fenix-framework.properties"
+pomFile= directory+"pom.xml"
 
 class FenixFramework():
     host = ""
@@ -15,33 +19,39 @@ class FenixFramework():
     user = ""
     passw = ""
     menu = ""
+    dbmenu = ""
     screen = ""
     def setHost(self) : 
-        self.host = self.menu.getParam('Hostname')
-        self.menu.items[0] = ("Hostname : " + self.host,self.menu.items[0][1])
-        self.write()
+        self.host = self.dbmenu.getParam('Database hostname')
+        self.dbmenu.items[0] = ("Hostname : " + self.host,self.dbmenu.items[0][1])
+        self.writeDB()
     
     def setPort(self) : 
-        self.port = self.menu.getParam('Database port')
-        self.menu.items[1] = ("DB Port  : " + self.port,self.menu.items[1][1])
-        self.write()
+        self.port = self.dbmenu.getParam('Database port')
+        self.dbmenu.items[1] = ("DB Port  : " + self.port,self.dbmenu.items[1][1])
+        self.writeDB()
 
     def setDatabase(self) : 
-        self.name = self.menu.getParam('Database name')
-        self.menu.items[2] = ("DB Name  : " + self.name,self.menu.items[2][1])
-        self.write()
+        self.name = self.dbmenu.getParam('Database name')
+        self.dbmenu.items[2] = ("DB Name  : " + self.name,self.dbmenu.items[2][1])
+        self.writeDB()
 
     def setUser(self) : 
-        self.user = self.menu.getParam('username')
-        self.menu.items[3] = ("Username : " + self.user,self.menu.items[3][1])
-        self.write()
+        self.user = self.dbmenu.getParam('Database username')
+        self.dbmenu.items[3] = ("Username : " + self.user,self.dbmenu.items[3][1])
+        self.writeDB()
 
     def setPass(self) : 
-        self.passw = self.menu.getParam('Password')
-        self.menu.items[4] = ("Password : " + self.passw,self.menu.items[4][1])
-        self.write()
+        self.passw = self.dbmenu.getParam('Database password')
+        self.dbmenu.items[4] = ("Password : " + self.passw,self.dbmenu.items[4][1])
+        self.writeDB()
 
-    def write(self):
+    def setVersion(self) :
+	self.version = self.menu.getParam('FenixEdu Version')
+	self.menu.items[3] = ("FenixEdu Version : " + self.version,self.menu.items[3][1])
+	self.writePOM()
+
+    def writeDB(self):
         with open(propFile,"w") as f:
             f.write("# Add additional backend-specific configurations in here\n\n")
             f.write("dbAlias=//"+self.host+":"+self.port+"/"+self.name+"\n")
@@ -50,28 +60,72 @@ class FenixFramework():
             f.write("updateRepositoryStructureIfNeeded = true\n\n")
             f.write("canCreateDomainMetaObjects=false\n")
             f.close()
+    
+    def writePOM(self):
+	os.rename(pomFile,pomFile+"~")
+	
+	groupMatch = False
+	artifactMatch = False
+	
+	fwrite = open(pomFile,"w")		
+        with open(pomFile+"~","r") as f:
+            for line in f :
+		if artifactMatch :
+			line = re.sub(r"(.*version>).*(</version.*)",r"\g<1>"+self.version+"\g<2>",line) 
+			artifactMatch = False
+			groupMatch = False
+                if groupMatch :
+   			artifactMatch = re.match(".*artifactId>fenix</artifactId.*",line)
+                groupMatch = re.match(".*groupId>pt.ist</groupId*.",line)
+		fwrite.write(line)
+            f.close()
+	fwrite.close()
+     	os.remove(pomFile+"~")
 
     def load(self):
+	self.loadDB()
+	self.loadVersion()
+
+    def loadVersion(self):
+	groupMatch = False
+	artifactMatch = False
+		
+        with open(pomFile,"r") as f:
+            for line in f :
+		if artifactMatch :
+			versionMatch = re.match(".*version>(.*)</version.*",line) 
+			artifactMatch = False
+			groupMatch = False
+			self.version = versionMatch.group(1)
+			self.menu.items[3] = ("FenixEdu Version : " + self.version, self.menu.items[3][1])	
+			break
+                if groupMatch :
+   			artifactMatch = re.match(".*artifactId>fenix</artifactId.*",line)
+			continue
+                groupMatch = re.match(".*groupId>pt.ist</groupId*.",line)
+            f.close()
+
+    def loadDB(self):
         with open(propFile,"r") as f:
             for line in f :
                 result = re.match("dbAlias=//(.*):([0-9]+)/(.*)",line)
                 if result : 
                     self.host = result.group(1)
-                    self.menu.items[0] = ("Hostname : " + self.host,self.menu.items[0][1])
+                    self.dbmenu.items[0] = ("Hostname : " + self.host,self.dbmenu.items[0][1])
                     self.port = result.group(2)
-                    self.menu.items[1] = ("DB Port  : " + self.port,self.menu.items[1][1])
+                    self.dbmenu.items[1] = ("DB Port  : " + self.port,self.dbmenu.items[1][1])
                     self.name = result.group(3)
-                    self.menu.items[2] = ("DB Name  : " + self.name,self.menu.items[2][1])
+                    self.dbmenu.items[2] = ("DB Name  : " + self.name,self.dbmenu.items[2][1])
                     continue
                 result =  re.match("dbUsername=(.*)",line)
                 if result : 
                     self.user = result.group(1)
-                    self.menu.items[3] = ("Username : " + self.user,self.menu.items[3][1])
+                    self.dbmenu.items[3] = ("Username : " + self.user,self.dbmenu.items[3][1])
                     continue
                 result = re.match("dbPassword=(.*)",line)
                 if result : 
                     self.passw = result.group(1)
-                    self.menu.items[4] = ("Password : " + self.passw,self.menu.items[4][1])
+                    self.dbmenu.items[4] = ("Password : " + self.passw,self.dbmenu.items[4][1])
                     continue
             f.close()
    
@@ -86,7 +140,7 @@ class FenixFramework():
 	while( not self.isRunning()) :
 		time.sleep(1)
         self.menu.delWait()
-    
+
     def start(self) :
 	curses.endwin()	
         print check_output("/etc/init.d/mvninit.sh force_start",shell=True)
@@ -101,13 +155,25 @@ class FenixFramework():
     def destroy(self) :
         destroyDbMenu_items = [
                 ('Ok, destroy it', self.destroyConfirmed),]                                                            
-        destroyDbMenu = Menu(destroyDbMenu_items, "Destroying the database is irreversible, do you want to proceed?", self.screen)                           
+        destroyDbMenu = fenixedumenu.Menu(destroyDbMenu_items, "Destroying the database is irreversible, do you want to proceed?", self.screen)                           
         destroyDbMenu.display()
 
     def destroyConfirmed(self) : 
-	self.stop()
+        self.menu.wait("Server restart","Please wait while the server stops")
+        if (self.isRunning()) :
+    	    check_output("/etc/init.d/mvninit.sh stop",shell=True)
+	while(self.isRunning()) :
+		time.sleep(1)
+        self.menu.delWait()
+        self.menu.wait("Server restart","Please wait while we create a new database")
 	call("mysql -u"+self.user+" -p"+self.passw+" -e 'drop database "+self.name+"; create database "+self.name+";'",shell=True)
+        self.menu.delWait()
+        self.menu.wait("Server restart","Please wait while we start the server again")
 	self.start()
+	while(self.isRunning()) :
+		time.sleep(1)
+        self.menu.delWait()
+	self.menu.terminate = True
 
 def getUrl() :
     with open(configFile,'r') as file:

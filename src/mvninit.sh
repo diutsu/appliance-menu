@@ -2,10 +2,10 @@
 # init script for `mvn tomcat7:run`
  
  
-MAVEN_OPTS_CLI="-Dserver -DXms256m -DXmx1024m -DXX:PermSize=512m -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false"
+MAVEN_OPTS_CLI="-Dserver -DXms256m -DXmx1024m -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false"
 JAVA_HOME="/usr/lib/jvm/java-7-oracle/jre"
 M2_HOME="/usr"
-MAVEN_REPO="/home/fenixuser/.m2/repository"
+MAVEN_REPO="/home/fenixedu/.m2/repository"
  
 LOG_FILE="log/fenix.out"
 PID_FILE=".run/mvn_pid"
@@ -13,11 +13,11 @@ PID_FILE=".run/mvn_pid"
 JAVA="$JAVA_HOME/bin/java"
 MAVEN="$M2_HOME/bin/mvn"
  
-BASE_DIR="/home/fenixuser"
+BASE_DIR="/home/fenixedu"
 LOG_FILE="$BASE_DIR/$LOG_FILE"
 PID_FILE="$BASE_DIR/$PID_FILE"
 
-export JAVA_OPTS="-server -Xms512m -Xmx2048m -XX:PermSize=512m"
+export JAVA_OPTS="-server -Xms512m -Xmx2048m"
 
 export MAVEN_OPTS="$JAVA_OPTS  -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false"
   
@@ -33,7 +33,7 @@ do_start(){
 
 do_force_start(){
     do_stop
-    cd $BASE_DIR/fenix-webapp
+    cd $BASE_DIR/fenixedu-appliance-webapp
     mvn $MAVEN_OPTS_CLI tomcat7:run > $LOG_FILE 2>&1 &
     echo -n $! > $PID_FILE
  

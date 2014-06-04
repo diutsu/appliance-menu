@@ -155,10 +155,10 @@ class CursesIfaces():
             settings["address"]=self.address
 
         curses.endwin()
-        interfaces.setStatic(settings)  
+        setStatic(settings)  
 
     def load(self):
-        settings = interfaces.loadStaticSettings()
+        settings = loadStaticSettings()
         self.address =  settings["address"] if "address" in settings.keys() else ""
         self.menu.items[0] = ("Address  : " + self.address,self.menu.items[0][1])
         self.network = settings["network"] if "network" in settings.keys() else ""
@@ -180,7 +180,7 @@ class CursesIfaces():
 	return
 
     def setDHCP(self) :
-        interfaces.setDHCP()
+        setDHCP()
         self.menu.confirm("Changed to DHCP","Restart network, to apply changes")
         
     def editInterfaces(self):

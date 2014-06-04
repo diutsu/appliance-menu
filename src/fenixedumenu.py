@@ -21,7 +21,7 @@ class Menu(object):
         self.topPanel = panel.new_panel(self.top)
         self.terminate = False
         if exit : 
-            self.items.append(('Exit','exit'))                                   
+            self.items.append(('Back','exit'))                                   
 
     def navigate(self, n):                                                   
         self.position += n                                                   

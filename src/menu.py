@@ -64,17 +64,25 @@ class ApplianceMenu(object):
         ifacesMenu = fenixedumenu.Menu(ifacesMenu_items, "Static eth0 Settings", self.screen)                           
         ci.menu = ifacesMenu
         
-        databaseMenu_items = [
-                ('Hostname : ', ff.setHost),                                       
+	databaseMenu_items = [
+                ('DB Hostname : ', ff.setHost),                                       
                 ('DB Port  : ', ff.setPort),
                 ('DB Name  : ', ff.setDatabase),
-                ('Username : ', ff.setUser),                                      
-                ('Password : ', ff.setPass),                                      
-                ('Restart Fenix', ff.restart),                                      
-                ('Destroy context', ff.destroy),                                      
+                ('DB Username : ', ff.setUser),                                      
+                ('DB Password : ', ff.setPass),                                      
                  ]                                                            
         databaseMenu = fenixedumenu.Menu(databaseMenu_items, "Database Settings", self.screen)                           
-        ff.menu = databaseMenu
+        
+	fenixMenu_items = [
+		('Database Settings', databaseMenu.display),
+                ('Restart Fenix', ff.restart),                                      
+                ('Destroy database', ff.destroy),
+		('FenixEdu Version : ',ff.setVersion),
+		]
+        fenixMenu = fenixedumenu.Menu(fenixMenu_items, "FenixEdu Management", self.screen)                           
+		
+        ff.dbmenu = databaseMenu
+        ff.menu = fenixMenu
         ff.load()
 	ff.screen = self.screen
     
@@ -93,9 +101,9 @@ class ApplianceMenu(object):
         systemMenu = fenixedumenu.Menu(systemMenu_items, "System", self.screen)                           
 
         main_menu_items = [                                                  
-                ('Network', networkMenu.display),                                       
-                ('Database Info', databaseMenu.display),
+                ('FenixEdu Management', fenixMenu.display),
                 ('SSH Server', sshMenu.display),
+                ('Network', networkMenu.display),                                       
                 ('System', systemMenu.display)                                 
                 ]                                                            
         main_menu = fenixedumenu.Menu(main_menu_items, "FenixEdu VM", self.screen, False)                       
