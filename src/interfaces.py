@@ -17,6 +17,11 @@ def get_ip_address(ifname):
         struct.pack('256s', ifname[:15])
     )[20:24])
 
+def get_mac_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    info = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('256s', ifname[:15]))
+    return ''.join(['%02x:' % ord(char) for char in info[18:24]])[:-1]
+
 def setStatic(settings) :
     fwrite = open('if~','w')
     with open('/etc/network/interfaces','r') as fread:
@@ -42,7 +47,7 @@ def setStatic(settings) :
         finally:
             fread.close()
             fwrite.close()
-            os.rename('if~','if')
+            os.rename('if~','/etc/network/interfaces')
 
 def setDHCP():
     fwrite = open('if~','w')
@@ -170,7 +175,7 @@ class CursesIfaces():
         self.netmask = settings["netmask"] if "netmask" in settings.keys() else ""
         self.menu.items[4] = ("Netmask  : " + self.netmask,self.menu.items[4][1])
         self.menu.display()
-        self.menu.confirm("Changed to DHCP","Restart network, to apply changes")
+        #self.menu.confirm("Changed to Static","Restart network, to apply changes")
             
     def reloadNetwork(self):
         self.menu.wait("Network restart","Please wait while network restarts")
@@ -181,7 +186,7 @@ class CursesIfaces():
 
     def setDHCP(self) :
         setDHCP()
-        self.menu.confirm("Changed to DHCP","Restart network, to apply changes")
+        self.menu.confirm("Set to DHCP","Restart network, to apply changes")
         
     def editInterfaces(self):
         curses.endwin()

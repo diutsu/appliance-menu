@@ -47,9 +47,9 @@ class FenixFramework():
         self.writeDB()
 
     def setVersion(self) :
-	self.version = self.menu.getParam('FenixEdu Version')
-	self.menu.items[3] = ("FenixEdu Version : " + self.version,self.menu.items[3][1])
-	self.writePOM()
+        self.version = self.menu.getParam('FenixEdu Version')
+        self.menu.items[3] = ("FenixEdu Version : " + self.version,self.menu.items[3][1])
+        self.writePOM()
 
     def writeDB(self):
         with open(propFile,"w") as f:
@@ -62,34 +62,34 @@ class FenixFramework():
             f.close()
     
     def writePOM(self):
-	os.rename(pomFile,pomFile+"~")
-	
-	groupMatch = False
-	artifactMatch = False
-	
-	fwrite = open(pomFile,"w")		
+        os.rename(pomFile,pomFile+"~")
+   
+        groupMatch = False
+        artifactMatch = False
+   
+        fwrite = open(pomFile,"w")    
         with open(pomFile+"~","r") as f:
             for line in f :
-		line = re.sub(r"(.*version.pt.ist.fenix>).*(</version.pt.ist.fenix*)",r"\g<1>"+self.version+"\g<2>",line) 
-		fwrite.write(line)
+                line = re.sub(r"(.*version.pt.ist.fenix>).*(</version.pt.ist.fenix*)",r"\g<1>"+self.version+"\g<2>",line) 
+                fwrite.write(line)
             f.close()
-	fwrite.close()
-     	os.remove(pomFile+"~")
+        fwrite.close()
+        os.remove(pomFile+"~")
 
     def load(self):
-	self.loadDB()
-	self.loadVersion()
+        self.loadDB()
+        self.loadVersion()
 
     def loadVersion(self):
-	groupMatch = False
-	artifactMatch = False
-		
+        groupMatch = False
+        artifactMatch = False
+      
         with open(pomFile,"r") as f:
             for line in f :
-                versionMatch = re.match(".*version>(.*)</version.*",line) 
+                versionMatch = re.match(".*version.pt.ist.fenix>(.*)</version.pt.ist.fenix*",line) 
                 if versionMatch :
                     self.version = versionMatch.group(1)
-                    self.menu.items[3] = ("FenixEdu Version : " + self.version, self.menu.items[3][1])	
+                    self.menu.items[3] = ("FenixEdu Version : " + self.version, self.menu.items[3][1])   
                     break
             f.close()
 
@@ -120,48 +120,51 @@ class FenixFramework():
     def restart(self) :
         self.menu.wait("Server restart","Please wait while the server restarts")
         if (self.isRunning()) :
-    	    check_output("/etc/init.d/mvninit.sh stop",shell=True)
-	while(self.isRunning()) :
-		time.sleep(1)
-	time.sleep(10)
-	check_output("/etc/init.d/mvninit.sh start",shell=True)
-	while( not self.isRunning()) :
-		time.sleep(1)
+            check_output("/etc/init.d/mvninit.sh stop",shell=True)
+        while(self.isRunning()) :
+            time.sleep(1)
+        time.sleep(10)
+        check_output("/etc/init.d/mvninit.sh start",shell=True)
+        while( not self.isRunning()) :
+            time.sleep(1)
         self.menu.delWait()
 
     def start(self) :
-	curses.endwin()	
-        print check_output("/etc/init.d/mvninit.sh force_start",shell=True)
+        curses.endwin()   
+        check_output("/etc/init.d/mvninit.sh force_start",shell=True)
 
     def isRunning(self) :
-	try:
-	    urllib2.urlopen('http://localhost/')
+        try:
+            urllib2.urlopen('http://localhost/')
             return True
-	except:
-	    return False
+        except:
+            return False
 
     def destroy(self) :
-        destroyDbMenu_items = [
+        self.destroyDbMenu_items = [
                 ('Ok, destroy it', self.destroyConfirmed),]                                                            
-        destroyDbMenu = fenixedumenu.Menu(destroyDbMenu_items, "Destroying the database is irreversible, do you want to proceed?", self.screen)                           
-        destroyDbMenu.display()
+        self.destroyDbMenu = fenixedumenu.Menu(self.destroyDbMenu_items, "This is irreversible, do you want to proceed?", self.screen)                           
+        self.destroyDbMenu.display()
 
     def destroyConfirmed(self) : 
         self.menu.wait("Server restart","Please wait while the server stops")
         if (self.isRunning()) :
-    	    check_output("/etc/init.d/mvninit.sh stop",shell=True)
-	while(self.isRunning()) :
-		time.sleep(1)
+            check_output("/etc/init.d/mvninit.sh stop",shell=True)
+            while(self.isRunning()) :
+                time.sleep(1)
         self.menu.delWait()
         self.menu.wait("Server restart","Please wait while we create a new database")
-	call("mysql -u"+self.user+" -p"+self.passw+" -e 'drop database "+self.name+"; create database "+self.name+";'",shell=True)
+        call("mysql -u"+self.user+" -p"+self.passw+" -e 'drop database "+self.name+"; create database "+self.name+";'",shell=True)
         self.menu.delWait()
         self.menu.wait("Server restart","Please wait while we start the server again")
-	self.start()
-	while(not self.isRunning()) :
-		time.sleep(1)
+        self.start()
+        while(not self.isRunning()) :
+            time.sleep(1)
+        self.destroyDbMenu.removeOptions()
         self.menu.delWait()
-	self.menu.terminate = True
+        curses.doupdate()
+
+        terminate = True
 
 def getUrl() :
     with open(configFile,'r') as file:

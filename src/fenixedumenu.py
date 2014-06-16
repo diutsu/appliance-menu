@@ -8,7 +8,9 @@ from  curses import panel,textpad
 class Menu(object):                                                          
 
     def __init__(self, items, title, stdscreen, exit = True):                                    
-        self.window = stdscreen.subwin(11,0)                                  
+        height, width = stdscreen.getmaxyx()
+        self.horizCenter = width/2
+        self.window = stdscreen.subwin(18,0)                                  
         self.window.keypad(1)                                                
         self.panel = panel.new_panel(self.window)                            
         self.panel.hide()                                                    
@@ -31,7 +33,7 @@ class Menu(object):
             self.position = len(self.items)-1                                
 
     def displayTop(self) :
-        self.top = curses.newwin(11,78,0,0)
+        self.top = curses.newwin(16,78,0,0)
         self.topPanel = panel.new_panel(self.top)
         self.updateTop()
         self.topPanel.top()
@@ -43,32 +45,52 @@ class Menu(object):
     def updateTop(self) :
         try :
             self.ip = interfaces.get_ip_address("eth0")
+            self.mac = interfaces.get_mac_address("eth0")
         except :
             self.ip = False
+            self.mac = "0"
         try:
             self.url = fenixFrameworkProp.getUrl()
         except : 
             self.url = False
-
-        self.top.addstr(0,0,"                   XXXXXXX                                                    ")
-        self.top.addstr(1,0,"                  + XXXXX +                                                   ")
-        self.top.addstr(2,0,"                +++++ X +++++                                                 ")
-        self.top.addstr(3,0,"               +++++++ +++++++                                                ")
-        self.top.addstr(4,0,"              . +++++ . +++++ .            FenixEdu™                          ")
-        self.top.addstr(5,0,"            ..... + ..... + .....          VM                                 ")
-        self.top.addstr(6,0,"           ....... ....... .......                                            ")
-        self.top.addstr(7,0,"            .....   .....   .....                                             ")
-        self.top.addstr(8,0,"              .       .       .                                               ")
+        blueColor = curses.color_pair(7)
+        redColor = curses.color_pair(2)
+        greenColor = curses.color_pair(3)
+        strCenter = (len("FenixEdu")+22)/2
+        self.top.addstr(1,self.horizCenter/2+15-strCenter,"         XXXXXXX         ",blueColor)
+        self.top.addstr(2,self.horizCenter/2+15-strCenter,"        + XXXXX +        ",blueColor)
+        self.top.addstr(3,self.horizCenter/2+15-strCenter,"      +++++ X +++++      ",blueColor)
+        self.top.addstr(4,self.horizCenter/2+15-strCenter,"     +++++++ +++++++     ",blueColor)
+        self.top.addstr(5,self.horizCenter/2+15-strCenter,"    . +++++ . +++++ .    ",blueColor)
+        self.top.addstr(5,self.horizCenter/2+15-strCenter+30,"FenixEdu")
+        self.top.addstr(6,self.horizCenter/2+15-strCenter,"  ..... + ..... + .....  ",blueColor)
+        self.top.addstr(6,self.horizCenter/2+15-strCenter+30,"Node    ")
+        self.top.addstr(7,self.horizCenter/2+15-strCenter," ....... ....... ....... ",blueColor)
+        self.top.addstr(8,self.horizCenter/2+15-strCenter,"  .....   .....   .....  ",blueColor)
+        self.top.addstr(9,self.horizCenter/2+15-strCenter,"    .       .       .    ",blueColor)
         if self.ip :
-            if self.url and not self.url == "localhost":
-                self.top.addstr(9,0,"Your url is http://"+self.url+"/")
-            else : 
-                self.top.addstr(9,0,"Your url is http://"+self.ip+"/")
-            self.top.addstr(10,0,"Your IP is : " + self.ip)
-        else : 
-            self.top.addstr(10,0,"Check your network configurations")
-        self.top.refresh()
+            dspStr = "IP address : " + self.ip
+            self.top.addstr(11,1+self.horizCenter-len(dspStr)/2,dspStr)
+            
+            dspStr = "MAC address : " + self.mac
+            self.top.addstr(12,self.horizCenter-len(dspStr)/2,dspStr)
 
+            dspStr = "To finish configuring this node go to:"
+            self.top.addstr(14,self.horizCenter-len(dspStr)/2,dspStr)
+           
+            if self.url and not self.url == "localhost":
+                dpsStr = "http://"+self.url+"/"
+                self.top.addstr(15,self.horizCenter-len(dspStr)/2,dspStr,greenColor)
+            else : 
+                dspStr = "http://"+self.ip+"/"
+                self.top.addstr(15,self.horizCenter-len(dspStr)/2,dspStr,greenColor)
+        else : 
+            dspStr ="Please check your network configurations"
+            self.top.addstr(12,self.horizCenter-len(dspStr)/2,dspStr,redColor)
+            
+            dspStr = "Could not determine your IP address"
+            self.top.addstr(13,self.horizCenter-len(dspStr)/2,dspStr,redColor)
+        self.top.refresh()
 
     def display(self):                                                       
         self.panel.top()                                                     
@@ -90,9 +112,9 @@ class Menu(object):
                 self.window.addstr(1+index, 1, msg, mode)                    
 
             key = self.window.getch()                                        
-
+            
             if key in [curses.KEY_ENTER, ord('\n')]:                         
-                if (self.position == len(self.items)-1 and self.hasExit) or self.terminate:                       
+                if (self.position == len(self.items)-1 and self.hasExit) :                       
                     break                                                    
                 else:                                                        
                     self.items[self.position][1]()
@@ -107,6 +129,11 @@ class Menu(object):
         self.panel.hide()                                                    
         panel.update_panels()                                                
         curses.doupdate()
+
+    def removeOptions(self) :
+        self.items = [('Back','exit')]
+        self.panel.show()
+        self.window.clear()
 
     def getParam(self, prompt_string):
         prompt = curses.newwin(3,43,5,0)
@@ -168,6 +195,6 @@ class Menu(object):
 
     def setTitle(self,string,win) :
         win.attron(curses.A_REVERSE)
-        win.addstr(0,1,"  "+string)
+        win.addstr(0,1," "+string)
         win.attroff(curses.A_REVERSE)
         
