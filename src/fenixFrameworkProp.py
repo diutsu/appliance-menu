@@ -70,13 +70,7 @@ class FenixFramework():
 	fwrite = open(pomFile,"w")		
         with open(pomFile+"~","r") as f:
             for line in f :
-		if artifactMatch :
-			line = re.sub(r"(.*version>).*(</version.*)",r"\g<1>"+self.version+"\g<2>",line) 
-			artifactMatch = False
-			groupMatch = False
-                if groupMatch :
-   			artifactMatch = re.match(".*artifactId>fenix</artifactId.*",line)
-                groupMatch = re.match(".*groupId>pt.ist</groupId*.",line)
+		line = re.sub(r"(.*version.pt.ist.fenix>).*(</version.pt.ist.fenix*)",r"\g<1>"+self.version+"\g<2>",line) 
 		fwrite.write(line)
             f.close()
 	fwrite.close()
@@ -92,17 +86,11 @@ class FenixFramework():
 		
         with open(pomFile,"r") as f:
             for line in f :
-		if artifactMatch :
-			versionMatch = re.match(".*version>(.*)</version.*",line) 
-			artifactMatch = False
-			groupMatch = False
+		versionMatch = re.match(".*version.pt.ist.fenix>(.*)</version.*",line) 
+		if versionMatch : 
 			self.version = versionMatch.group(1)
 			self.menu.items[3] = ("FenixEdu Version : " + self.version, self.menu.items[3][1])	
 			break
-                if groupMatch :
-   			artifactMatch = re.match(".*artifactId>fenix</artifactId.*",line)
-			continue
-                groupMatch = re.match(".*groupId>pt.ist</groupId*.",line)
             f.close()
 
     def loadDB(self):
@@ -170,7 +158,7 @@ class FenixFramework():
         self.menu.delWait()
         self.menu.wait("Server restart","Please wait while we start the server again")
 	self.start()
-	while(self.isRunning()) :
+	while(not self.isRunning()) :
 		time.sleep(1)
         self.menu.delWait()
 	self.menu.terminate = True

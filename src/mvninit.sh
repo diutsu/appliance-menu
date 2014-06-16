@@ -2,8 +2,8 @@
 # init script for `mvn tomcat7:run`
  
  
-MAVEN_OPTS_CLI="-Dserver -DXms256m -DXmx1024m -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false"
-JAVA_HOME="/usr/lib/jvm/java-7-oracle/jre"
+MAVEN_OPTS_CLI="-DXms256m -DXmx1024m -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false -Djava.awt.headless=true -Dmaven.compiler.useIncrementalCompilation=false -D-noverify"
+JAVA_HOME="/usr/lib/jvm/java-8-oracle/jre"
 M2_HOME="/usr"
 MAVEN_REPO="/home/fenixedu/.m2/repository"
  
@@ -17,7 +17,7 @@ BASE_DIR="/home/fenixedu"
 LOG_FILE="$BASE_DIR/$LOG_FILE"
 PID_FILE="$BASE_DIR/$PID_FILE"
 
-export JAVA_OPTS="-server -Xms512m -Xmx2048m"
+export JAVA_OPTS="-Xms512m -Xmx2048m"
 
 export MAVEN_OPTS="$JAVA_OPTS  -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false"
   
@@ -63,6 +63,7 @@ do_stop(){
 	    then
 		kill -9 `cat $PID_FILE`
 		EXIT_STATUS=$?
+		rm "/home/fenixedu/fenixedu-appliance-webapp/target/tomcat" -rf
 		rm "$PID_FILE"
 	    fi
 	 
