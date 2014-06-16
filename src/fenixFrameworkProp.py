@@ -86,11 +86,11 @@ class FenixFramework():
 		
         with open(pomFile,"r") as f:
             for line in f :
-		versionMatch = re.match(".*version.pt.ist.fenix>(.*)</version.*",line) 
-		if versionMatch : 
-			self.version = versionMatch.group(1)
-			self.menu.items[3] = ("FenixEdu Version : " + self.version, self.menu.items[3][1])	
-			break
+                versionMatch = re.match(".*version>(.*)</version.*",line) 
+                if versionMatch :
+                    self.version = versionMatch.group(1)
+                    self.menu.items[3] = ("FenixEdu Version : " + self.version, self.menu.items[3][1])	
+                    break
             f.close()
 
     def loadDB(self):
