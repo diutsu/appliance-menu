@@ -1,6 +1,7 @@
 #!/bin/bash
 # init script for `mvn tomcat7:run`
  
+ 
 MAVEN_OPTS_CLI="-DXms256m -DXmx1024m -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false -Djava.awt.headless=true -Dmaven.compiler.useIncrementalCompilation=false -D-noverify"
 JAVA_HOME="/usr/lib/jvm/java-8-oracle/jre"
 M2_HOME="/usr"
@@ -16,9 +17,13 @@ BASE_DIR="/home/fenixedu"
 LOG_FILE="$BASE_DIR/$LOG_FILE"
 PID_FILE="$BASE_DIR/$PID_FILE"
 
+export LC_ALL="en_GB.UTF-8"
+export LANG="en_GB.UTF-8"
+export LANGUAGE="en_GB.UTF-8"
+
 export JAVA_OPTS="-Xms512m -Xmx2048m"
 
-export MAVEN_OPTS="$JAVA_OPTS  -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false -Djava.awt.headless=true -Dmaven.compiler.useIncrementalCompilation=false -noverify"
+export MAVEN_OPTS="$JAVA_OPTS  -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false"
   
 do_start(){
     if [ -f $PID_FILE ]
@@ -63,7 +68,7 @@ do_stop(){
 		kill -9 `cat $PID_FILE`
 		EXIT_STATUS=$?
 		rm "/home/fenixedu/fenixedu-appliance-webapp/target/tomcat" -rf
-        rm "$PID_FILE"
+		rm "$PID_FILE"
 	    fi
 	 
 	    if [ "$EXIT_STATUS" = 0 ]
